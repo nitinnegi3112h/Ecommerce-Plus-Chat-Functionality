@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken'
 export const register=async(req,res)=>
 {
      try {
-         const {email,userName,password}=req.body;
+         const {email,userName,password,isAdmin}=req.body;
          console.log(req.body);
  
          if(!email || !userName || !password)
@@ -21,6 +21,7 @@ export const register=async(req,res)=>
              userName:userName,
              email:email,
              password:hashedPassword,
+             isAdmin:isAdmin,
          })
  
          const savedUser= await newUser.save();

@@ -1,7 +1,7 @@
 import express from 'express'
 import { verifyToken, verifyTokenAndAdmin, verifyTokenAndAuthorization } from '../Middleware/verifyToken.js';
 const router=express.Router();
-import { addToOrder, deleteOrder, getUserOrder, previousOrder, updateOrderDetails, } from '../Controller/OrdreController.js';
+import { addToOrder, deleteOrder, getUserOrder, previousOrder, updateDeliveryStatus, updateOrderDetails, } from '../Controller/OrdreController.js';
 // Add product into Order
 router.post('/addToOrder',verifyToken,addToOrder);
 
@@ -20,6 +20,6 @@ router.get('/find/:userId',verifyTokenAndAuthorization,getUserOrder);
 router.get('/getPreviousOrder',verifyToken,previousOrder);
 
 //Update Delivery Status
-router.get('/UpdateDeliveryStatus',verifyToken,previousOrder);
+router.post('/UpdateDeliveryStatus',verifyTokenAndAdmin,updateDeliveryStatus);
 
 export default router;

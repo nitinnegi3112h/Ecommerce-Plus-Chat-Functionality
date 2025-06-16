@@ -1,43 +1,75 @@
 import Order from '../Models/OrderSchema.js'
+import Product from '../Models/Product.js';
 import Sales from '../Models/SalesSchema.js';
 
 // Add product into Order
 export const addToOrder=async(req,res)=>
 {
-       try {   
+    try {         
+          const data=req.body;
 
-        
+          const groupSameSellerData={};
 
-        const newOrder=new Order(req.body );
-        const savedOrder=await newOrder.save();
-        const ProductSales=await Order.findById(savedOrder._id).populate('products.productId');
+          for(const temp of data.products )
+          {
+          const newData=await Product.findOne({_id:temp.productId});
+          const key = newData.sellerId;
 
-        for(const p of ProductSales.products)
-        {
-           const sellerId=p.productId.sellerId;
-           const quantity=p.quantity;
-           const productId=p.productId._id;
-         
-            await Sales.findOneAndUpdate({sellerId:sellerId},
-            {$push:{ProductDetails:{productId,quantity:quantity}}},
-            {upsert:true,new:true});
+          groupSameSellerData[key]= groupSameSellerData[key] || [];
 
-        }
+          groupSameSellerData[key].push({ product: newData, quantity: temp.quantity });
+          }
 
-        
-        res.status(201).json({
-            message:"Order has been proceed .....",
-            savedOrder
-        });
 
-       } catch (error) {
-        
-        console.log(error);
-         res.status(401).json({
-            message:"Order Has been added failed..",
-         });
-       }
-};
+          let savedOrder;
+
+          for(const temp in groupSameSellerData)
+          {
+          const ProductIdAndQuantity=[];
+          let totalAmount=0;
+          let sellerId;
+          const {userId,address} =req.body;
+
+          for(const newData of groupSameSellerData[temp])
+          {
+
+          sellerId=newData.product.sellerId;
+          ProductIdAndQuantity.push({productId:newData.product._id,quantity:newData.quantity})
+          totalAmount+=(newData.product.price * newData.quantity)
+
+          }
+
+          //To update Sales Data to Seller sales
+          await Sales.findOneAndUpdate({sellerId:sellerId},
+          {$push:{ProductDetails:{$each:ProductIdAndQuantity}}},
+          {upsert:true,new:true});
+
+          console.log(ProductIdAndQuantity)
+          const newOrder = new Order({
+          userId,
+          address,
+          amount: totalAmount,
+          sellerId,
+          products: ProductIdAndQuantity // tempData should be an array of product objects
+          });
+
+          savedOrder =await newOrder.save();
+
+          }
+
+
+          res.status(201).json({
+          message:"Order has been proceed .....",
+          savedOrder
+          });
+
+          } catch (error) {
+
+          console.log(error);
+          res.status(401).json({
+          message:"Order Has been added failed..",
+      });
+}};
 
 //Update Order Details
 export const updateOrderDetails=async(req,res)=>
@@ -146,17 +178,28 @@ export const updateDeliveryStatus=async (req,res)=>
   try {
 
     const {orderId,newStatus}=req.body;
+    const userId=req.user.id;
+    const orderData=await Order.findOne({_id:orderId});
 
-    const updatedOrderDetails=await Order.findByIdAndUpdate({orderId},
+    if(userId != orderData.sellerId)
+    {
+       res.status(401).json({
+        message:"You have Not Permission To Update the Status...."
+      })
+      
+    }
+
+    const updatedOrderDetails=await Order.findByIdAndUpdate({_id:orderId},
       {$set:{status:newStatus}},{new:true});
    
       res.status(201).json({
         message:"Order Status Updated Successfully...",
-        updateOrderDetails,
+        updatedOrderDetails
       })
       
   } catch (error) {
     
+    console.log(error);
     res.status(401).json({
       message:"Failed To Update Delivery Status..."
     })

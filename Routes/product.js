@@ -1,6 +1,6 @@
 import express from 'express'
 import { verifyToken, verifyTokenAndAdmin } from '../Middleware/verifyToken.js';
-import {addNewProduct, deleteProduct, getAllProduct, getProduct, updateProductDetails} from "../Controller/ProductController.js"
+import {addNewProduct, deleteProduct, FilterProduct, getAllProduct, getCountOfCategory, getProduct, updateProductDetails} from "../Controller/ProductController.js"
 
 const router=express.Router();
 
@@ -22,5 +22,7 @@ router.get('/find/:id',verifyTokenAndAdmin,getProduct);
 // Get All products
 
 router.get('/',verifyToken,getAllProduct);
+router.get('/getCountOfCategory',verifyTokenAndAdmin,getCountOfCategory);
+router.post('/filterProduct',verifyToken,FilterProduct);
 
 export default router;

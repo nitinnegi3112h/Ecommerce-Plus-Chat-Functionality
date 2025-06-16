@@ -112,3 +112,70 @@ export const getAllProduct=async(req,res)=>
       }
 }
 
+export const getCountOfCategory=async (req,res)=>
+{
+  try {
+       
+     const result=await Product.aggregate([
+      {
+        $group:{
+          _id:"$categories",
+          count:{$sum:1},
+        }
+      }
+     ]);
+
+     res.status(201).json({
+      message:'Product Category Count return Successfully..',
+      result
+     })
+
+
+  } catch (error) {
+    
+    res.status(401).json({
+      message:"Counting Product Category Count Failed ...."
+    })
+  }
+}
+
+
+export const FilterProduct=async(req,res)=>
+{
+  try {
+    
+    const {search,sortBy,sortOrder}=req.body;
+
+    const filter={};
+    const sortOptions={};
+    
+   if(search)
+   {
+    filter.title={$regex:search,$options:'i'};
+   }
+   else if (sortBy)
+   {
+    sortOptions[sortBy]=sortOrder === 'asc' ? 1 : -1
+   }
+   else 
+   {
+      sortOptions.createdAt=-1;
+   }
+
+
+   const product=await Product.find(filter).sort(sortOptions);
+
+   res.status(201).json({
+    message: 'Product Filter Successfully...',
+    product
+   })
+
+
+  } catch (error) {
+    
+    res.status(401).json({
+      message:"Product Filter Failed ...."
+    })
+
+  }
+}

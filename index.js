@@ -9,6 +9,7 @@ import cartRoutes from './Routes/cart.js';
 import orderRoutes from './Routes/order.js';
 import messageRoutes from "./Routes/message.js"
 import salesRoutes from "./Routes/sales.js"
+import paymentRoutes from "./Routes/payment.js"
 const app=express();
 import setupSocket from "./Socket.js"
 
@@ -24,6 +25,7 @@ app.use('/api/cart',cartRoutes);
 app.use('/api/order',orderRoutes);
 app.use('/api/message',messageRoutes);
 app.use('/api/sale',salesRoutes);
+app.use('/api/payment',paymentRoutes);
 
 const server=app.listen(PORT,()=>{
     connect()

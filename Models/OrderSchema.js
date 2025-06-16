@@ -18,7 +18,8 @@ const OrderSchema=new mongoose.Schema({
      ],
      amount:{type:Number,required:true},
      address:{type:Object,required:true},
-     status:{type:String,default:"Processing",enum:['Processing','Shipped','Delivered']}
+     status:{type:String,default:"Processing",enum:['Processing','Shipped','Delivered']},
+     sellerId:{type:mongoose.Schema.Types.ObjectId,ref:"User",required:true}
   
 },{timestamps:true});
 
