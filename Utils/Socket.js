@@ -1,6 +1,6 @@
 import { disconnect } from "mongoose";
 import { Server as  SockerIOServer } from "socket.io";
-import Message from "./Models/MessageSchema.js";
+import Message from "../Models/MessageSchema.js";
 
 
 const setupSocket=(server)=>{

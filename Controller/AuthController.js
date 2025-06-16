@@ -1,5 +1,6 @@
 import User from '../Models/UserSchema.js';
 import bcrypt from'bcrypt'
+import { rmSync } from 'fs';
 import jwt from 'jsonwebtoken'
 
 
@@ -117,4 +118,61 @@ export const Delete=async(req,res)=>
       } catch (error) {
           res.status(200).json("User has been deleted failed...");
       }
+}
+
+export const ForgotPassword=async(req,res)=>
+{
+    try {
+        
+            const {oldPassword,newPassword}=req.body;
+            const userId=req.user.id;
+
+
+            if(!oldPassword || !newPassword || !userId)
+            {
+            res.status(401).json({
+            message:"Please Enter All required Field..."
+            });
+            }
+
+            const user=await User.findById(userId);
+            console.log(user);
+
+            if(!user)
+            {
+            return res.status(500).json({
+            message:"User Not exist In DB...."
+            });
+            }
+
+
+            const result= await bcrypt.compare(oldPassword,user.password);
+            console.log(result);
+            if(!result)
+            {
+            return res.status(500).json({
+            message:"Please Enter Right Password...."
+            });
+            }
+
+            const hashedPassword=await bcrypt.hash(newPassword,10);
+
+            const updateUserData=await User.findByIdAndUpdate(userId,
+            {$set:{password:hashedPassword}},
+            {new:true}
+            );
+
+
+            res.status(201).json({
+            message:"User Password Updated Successfully...",
+            updateUserData
+            });
+
+            } catch (error) {
+
+            console.log(error)
+            res.status(401).json({
+            message:'User Password Updation Failed Try Again'
+            })
+            }
 }

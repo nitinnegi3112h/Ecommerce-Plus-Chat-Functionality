@@ -9,15 +9,16 @@ import cartRoutes from './Routes/cart.js';
 import orderRoutes from './Routes/order.js';
 import messageRoutes from "./Routes/message.js"
 import salesRoutes from "./Routes/sales.js"
-import paymentRoutes from "./Routes/payment.js"
+import paymentRoutes from "./Routes/payment.js" 
+import couponRoutes from "./Routes/coupon.js" 
 const app=express();
-import setupSocket from "./Socket.js"
+import setupSocket from "./Utils/Socket.js" 
 
 app.use(cookieParser());
 app.use(express.json());
 const PORT=process.env.PORT || 4000;
 
-
+app.use('/uploads/files',express.static('/uploads/files'));
 app.use('/api/user',userRoutes);
 app.use('/api/auth',authRoutes);
 app.use('/api/product',productRoutes);
@@ -26,6 +27,7 @@ app.use('/api/order',orderRoutes);
 app.use('/api/message',messageRoutes);
 app.use('/api/sale',salesRoutes);
 app.use('/api/payment',paymentRoutes);
+app.use('/api/coupon',couponRoutes);
 
 const server=app.listen(PORT,()=>{
     connect()

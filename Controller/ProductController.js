@@ -1,11 +1,33 @@
 import Product from "../Models/Product.js"
-
+import { renameSync, unlinkSync } from "fs";
 // Add New Product
 export const addNewProduct=async(req,res)=>
 {
       try {
-        console.log(req.body);
-        const newProduct=new Product(req.body);
+         
+        const {title,
+              desc,
+              categories,
+              size,
+              price,
+              sellerId
+            } =req.body;
+        
+         
+
+       const date=Date.now();
+       let filename="uploads/files/"+date+req.file.originalname;
+       renameSync(req.file.path,filename);
+
+        const newProduct=new Product({
+             title,
+              desc,
+              categories,
+              size,
+              price,
+              sellerId,
+              img:filename
+        });
         const savedProduct=await newProduct.save();
 
         res.status(201).json({

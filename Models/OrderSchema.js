@@ -19,7 +19,8 @@ const OrderSchema=new mongoose.Schema({
      amount:{type:Number,required:true},
      address:{type:Object,required:true},
      status:{type:String,default:"Processing",enum:['Processing','Shipped','Delivered']},
-     sellerId:{type:mongoose.Schema.Types.ObjectId,ref:"User",required:true}
+     sellerId:{type:mongoose.Schema.Types.ObjectId,ref:"User",required:true},
+     discount:{type:Number,default:0}
   
 },{timestamps:true});
 

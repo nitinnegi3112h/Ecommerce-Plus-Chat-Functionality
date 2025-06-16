@@ -1,75 +1,117 @@
+import Coupon from '../Models/CouponSchema.js';
 import Order from '../Models/OrderSchema.js'
 import Product from '../Models/Product.js';
 import Sales from '../Models/SalesSchema.js';
+import User from '../Models/UserSchema.js';
+import { sendMail } from '../Utils/MailerSender.js';
 
 // Add product into Order
-export const addToOrder=async(req,res)=>
-{
-    try {         
-          const data=req.body;
+export const addToOrder = async (req, res) => {
+  try {
+    const { userId, address, products,coupon } = req.body;
 
-          const groupSameSellerData={};
+    const groupedBySeller = {};
+    let user = await User.findById(userId);
+    let savedOrders = [];
 
-          for(const temp of data.products )
-          {
-          const newData=await Product.findOne({_id:temp.productId});
-          const key = newData.sellerId;
+    
+    const CouponData=await Coupon.findOne({name:coupon});
 
-          groupSameSellerData[key]= groupSameSellerData[key] || [];
-
-          groupSameSellerData[key].push({ product: newData, quantity: temp.quantity });
-          }
-
-
-          let savedOrder;
-
-          for(const temp in groupSameSellerData)
-          {
-          const ProductIdAndQuantity=[];
-          let totalAmount=0;
-          let sellerId;
-          const {userId,address} =req.body;
-
-          for(const newData of groupSameSellerData[temp])
-          {
-
-          sellerId=newData.product.sellerId;
-          ProductIdAndQuantity.push({productId:newData.product._id,quantity:newData.quantity})
-          totalAmount+=(newData.product.price * newData.quantity)
-
-          }
-
-          //To update Sales Data to Seller sales
-          await Sales.findOneAndUpdate({sellerId:sellerId},
-          {$push:{ProductDetails:{$each:ProductIdAndQuantity}}},
-          {upsert:true,new:true});
-
-          console.log(ProductIdAndQuantity)
-          const newOrder = new Order({
-          userId,
-          address,
-          amount: totalAmount,
-          sellerId,
-          products: ProductIdAndQuantity // tempData should be an array of product objects
-          });
-
-          savedOrder =await newOrder.save();
-
-          }
-
-
-          res.status(201).json({
-          message:"Order has been proceed .....",
-          savedOrder
-          });
-
-          } catch (error) {
-
-          console.log(error);
-          res.status(401).json({
-          message:"Order Has been added failed..",
+    if(coupon && ( !CouponData || CouponData.expiry < new Date() || CouponData.isClaimed === true))
+    {  
+     
+       return  res.status(401).json({
+        message:"Coupon Data is Invalid....."
       });
-}};
+    }
+
+    // Group products by seller
+    for (const item of products) {
+      const product = await Product.findById(item.productId);
+      const sellerId = product.sellerId;
+
+      if (!groupedBySeller[sellerId]) {
+        groupedBySeller[sellerId] = [];
+      }
+
+      groupedBySeller[sellerId].push({
+        product,
+        quantity: item.quantity,
+      });
+    }
+
+    // Create separate orders for each seller
+    for (const sellerId in groupedBySeller) {
+      const items = groupedBySeller[sellerId];
+
+      const productList = [];
+      let totalAmount = 0;
+
+      for (const { product, quantity } of items) {
+        productList.push({ productId: product._id, quantity });
+        totalAmount += product.price * quantity;
+      }
+
+      // Update seller's sales record
+      await Sales.findOneAndUpdate(
+        { sellerId },
+        { $push: { ProductDetails: { $each: productList } } },
+        { upsert: true, new: true }
+      );
+       
+      let discount=0;
+      if(CouponData && CouponData.isClaimed == false)
+      {
+        totalAmount=totalAmount-CouponData.discount;
+        totalAmount = totalAmount < 0 ? 0 : totalAmount;
+        CouponData.isClaimed=true;
+        await Coupon.findByIdAndUpdate(CouponData._id,{$set:{isClaimed:true}});
+        discount=CouponData.discount; 
+      }
+       
+      // Create and save the order
+      const newOrder = new Order({
+        userId,
+        address,
+        amount: totalAmount,
+        sellerId,
+        products: productList,
+        discount,
+      });
+
+      const saved = await newOrder.save();
+      savedOrders.push(saved);
+    }
+
+    // Send email to user for each order
+    for (const order of savedOrders) {
+      sendMail(
+        user.email,
+        "Your Product Delivery Update Email",
+        `
+        <div style="font-family: Arial; font-size: 16px;">
+          <p>Dear ${user.userName || 'Customer'},</p>
+          <p>Your order of <strong>₹${order.amount}</strong> has been processed successfully.</p>
+          <p>It will be delivered to the following address:</p>
+          <p><strong>${order.address}</strong></p>
+          <p>Thank you for shopping with us!</p>
+        </div>
+        `
+      );
+    }
+
+    res.status(201).json({
+      message: "Order has been processed successfully.",
+      savedOrders,
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(401).json({
+      message: "Order processing failed.",
+    });
+  }
+};
 
 //Update Order Details
 export const updateOrderDetails=async(req,res)=>

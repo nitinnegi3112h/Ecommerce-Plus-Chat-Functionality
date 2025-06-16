@@ -4,7 +4,7 @@ const ProductSchema=new mongoose.Schema({
 
      title:{type:String,required:true},
      desc:{type:String,required:true},
-     img:{type:String,required:false,default:null},
+     img:{type:String,required:true,default:null},
      categories:{type:String,
           enum:['Device','Clothes','Grocery','HealthCare'],
           required:true,
