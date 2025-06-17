@@ -1,5 +1,6 @@
 import Product from "../Models/Product.js"
 import { renameSync, unlinkSync } from "fs";
+import redis from "../Utils/redis.js";
 // Add New Product
 export const addNewProduct=async(req,res)=>
 {
@@ -74,7 +75,15 @@ export const updateProductDetails=async(req,res)=>
 export const deleteProduct=async(req,res)=>
 {
       try {
-        await Product.findByIdAndDelete(req.params.id);
+        const productId=req.params.id;
+
+        if(!productId)
+        {
+           return res.status(401).json({
+            message:"All field are required compulsory...."
+           })
+        }
+        await Product.findByIdAndDelete(productId);
         res.status(200).json("Product has been deleted...");
 
       } catch (error) {
@@ -106,7 +115,16 @@ export const getProduct=async(req,res)=>
 export const getAllProduct=async(req,res)=>
 {
     const qCategory=req.query.category;
-      try {
+      
+    try {
+          const userId=req.user.id;
+        const cachedData=await redis.get(`allProduct:${userId}`);
+
+        if(cachedData)
+        {
+          return res.status(200).json(JSON.parse(cachedData));
+        }
+
         
         let products;
 
@@ -122,13 +140,16 @@ export const getAllProduct=async(req,res)=>
         {
             products=await Product.find();
         }
-      
-       
 
+        await redis.set(`allProduct:${userId}`,JSON.stringify(products),'EX',60);
+
+
+      
         res.status(200).json(products);
 
       } catch (error) {
-          res.status(200).json(
+        console.log(error);
+        res.status(200).json(
             "Failed To Find Products...."
           );
       }

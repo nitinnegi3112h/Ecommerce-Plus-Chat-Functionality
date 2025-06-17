@@ -25,3 +25,21 @@ export function sendMail(to,sub,msg)
      });
 }
 
+export function sendOrderConfirmationMail(user,order)
+{
+    console.log(user);
+    console.log(order);
+     sendMail(
+        user.email,
+        "Your Product Delivery Update Email",
+        `
+        <div style="font-family: Arial; font-size: 16px;">
+          <p>Dear ${user.userName || 'Customer'},</p>
+          <p>Your order of <strong>₹${order.amount}</strong> has been processed successfully.</p>
+          <p>It will be delivered to the following address:</p>
+          <p><strong>${order.address}</strong></p>
+          <p>Thank you for shopping with us!</p>
+        </div>
+        `
+      );
+}

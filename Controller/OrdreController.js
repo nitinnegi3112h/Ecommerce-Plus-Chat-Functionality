@@ -3,7 +3,8 @@ import Order from '../Models/OrderSchema.js'
 import Product from '../Models/Product.js';
 import Sales from '../Models/SalesSchema.js';
 import User from '../Models/UserSchema.js';
-import { sendMail } from '../Utils/MailerSender.js';
+import { sendMail, sendOrderConfirmationMail } from '../Utils/MailerSender.js';
+import redis from '../Utils/redis.js';
 
 // Add product into Order
 export const addToOrder = async (req, res) => {
@@ -85,19 +86,7 @@ export const addToOrder = async (req, res) => {
 
     // Send email to user for each order
     for (const order of savedOrders) {
-      sendMail(
-        user.email,
-        "Your Product Delivery Update Email",
-        `
-        <div style="font-family: Arial; font-size: 16px;">
-          <p>Dear ${user.userName || 'Customer'},</p>
-          <p>Your order of <strong>₹${order.amount}</strong> has been processed successfully.</p>
-          <p>It will be delivered to the following address:</p>
-          <p><strong>${order.address}</strong></p>
-          <p>Thank you for shopping with us!</p>
-        </div>
-        `
-      );
+      sendOrderConfirmationMail(user,order);
     }
 
     res.status(201).json({
@@ -142,6 +131,7 @@ export const updateOrderDetails=async(req,res)=>
 export const deleteOrder=async(req,res)=>
 {
       try {
+        
         await Order.findByIdAndDelete(req.params.id);
         res.status(200).json("Order has been deleted...");
 
@@ -151,31 +141,25 @@ export const deleteOrder=async(req,res)=>
 }
 
 // Get User Order
-export const getUserOrder=async(req,res)=>
-{
-      try {
-       const OrderDetails= await Order.findById(req.params.id);
-
-        res.status(200).json({OrderDetails});
-
-      } catch (error) {
-        console.log(error);
-          res.status(200).json(
-            "Failed To Find Proudcts...."
-          );
-      }
-}
-
-
 
 
 
 export const pendingOrder=async (req,res)=>
 {
   try {
-    
-    const userId=req.user.id;
-    const pendingOrder=await Order.find({$and:[{status:"Pending"},{_id:userId}]});
+     const userId=req.user.id;
+    const cachedPendingOrder=await redis.get(`${userId}:getPendingOrders`);
+
+    if(cachedPendingOrder)
+    {
+      return res.status(201).json(JSON.parse(cachedPendingOrder));
+    } 
+
+    const pendingOrder=await Order.find({
+      status:"Processing",
+      userId:userId});
+
+    await redis.set(`${userId}:getPendingOrders`,JSON.stringify(pendingOrder),"EX",60);
 
     res.status(201).json({
       pendingOrder
@@ -195,7 +179,6 @@ export const previousOrder=async (req,res)=>
      try {
 
        const userId=req.user.id;
-       console.log(userId);
 
        const previousOrder=await Order.find({$and:[
         {status:"Delivered"},{userId:userId}

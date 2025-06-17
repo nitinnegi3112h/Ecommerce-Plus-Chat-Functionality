@@ -1,4 +1,5 @@
 import Coupon from "../Models/CouponSchema.js"
+import redis from "../Utils/redis.js";
 
 
 
@@ -24,11 +25,24 @@ export const CreateCoupon=async(req,res)=>
 export const getAllCoupon=async(req,res)=>
 {
     try {
-        
+        const userId=req.user.id;
+
+        const cachedCoupon=await redis.get(`${userId}:userCoupon`);
+
+        if(cachedCoupon)
+        {
+            return  res.status(201).json({
+            message:"These are all valid coupons",
+            Coupon: JSON.parse(cachedCoupon)
+        })
+        }
+
         const allCoupon=await Coupon.find({
             expiry:{$gte:new Date()},
             isClaimed:false
         });
+
+        await redis.set(`${userId}:userCoupon`,JSON.stringify(allCoupon),'EX',60);
 
         res.status(201).json({
             message:"These are all valid coupons",

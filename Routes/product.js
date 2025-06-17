@@ -15,7 +15,7 @@ router.put('/:id',verifyTokenAndAdmin,updateProductDetails);
 
 
 //Delete Product
-router.delete('/:id',verifyTokenAndAdmin,deleteProduct)
+router.delete('/deleteProduct/:id',verifyTokenAndAdmin,deleteProduct)
 
 // Get Product
 router.get('/find/:id',verifyTokenAndAdmin,getProduct);
