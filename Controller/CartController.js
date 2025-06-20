@@ -2,8 +2,8 @@ import Cart from "../Models/CartSchema.js";
 
 export const addToCart=async (req,res)=>
 {
-               try {
-              const newCart=new Cart(req.body );
+          try {
+            const newCart=new Cart(req.body );
             const savedCart=await newCart.save();
     
             res.status(201).json({

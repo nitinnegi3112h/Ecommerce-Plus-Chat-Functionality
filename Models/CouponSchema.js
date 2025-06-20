@@ -1,3 +1,4 @@
+
 import mongoose, { mongo } from "mongoose";
 
 const CouponSchema=new mongoose.Schema({
@@ -20,6 +21,11 @@ const CouponSchema=new mongoose.Schema({
         type:Boolean,
         required:true,
         default:false
+    },
+    creator:{
+        type:mongoose.Schema.Types.ObjectId,
+        required:true,
+        ref:"User"
     }
     
 })

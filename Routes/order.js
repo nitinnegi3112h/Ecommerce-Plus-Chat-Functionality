@@ -1,12 +1,12 @@
 import express from 'express'
 import { verifyToken, verifyTokenAndAdmin, verifyTokenAndAuthorization } from '../Middleware/verifyToken.js';
 const router=express.Router();
-import { addToOrder, deleteOrder, pendingOrder, previousOrder, updateDeliveryStatus, updateOrderDetails, } from '../Controller/OrdreController.js';
+import { addToOrder, deleteOrder, pendingOrder, previousOrder, updateDeliveryStatus, updateOrderAddress } from '../Controller/OrdreController.js';
 // Add product into Order
 router.post('/addToOrder',verifyToken,addToOrder);
 
 //Update Order Details
-router.put('/:id',verifyTokenAndAdmin,updateOrderDetails);
+router.put('/updateOrderAddress',verifyToken,updateOrderAddress);
 
 // Delete Order
 router.delete('/:id',verifyTokenAndAdmin,deleteOrder);

@@ -4,7 +4,9 @@ const updateUser=async(req,res)=>{
 
     try {
         
-        const updatedUser=await User.findByIdAndUpdate(req.params.id,
+      const userId=req.user.id;
+
+       const updatedUser=await User.findByIdAndUpdate(userId,
             {$set:req.body},
             {new:true}
         );

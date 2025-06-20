@@ -13,7 +13,9 @@ import paymentRoutes from "./Routes/payment.js"
 import couponRoutes from "./Routes/coupon.js" 
 const app=express();
 import setupSocket from "./Utils/Socket.js" 
+import cors from 'cors';
 
+app.use(cors());
 
 app.use(cookieParser());
 app.use(express.json());

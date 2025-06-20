@@ -11,6 +11,13 @@ export const addToOrder = async (req, res) => {
   try {
     const { userId, address, products,coupon } = req.body;
 
+    if(!userId || !address || !products || coupon)
+    {
+      return res.status(401).json({
+        message:"all Fields Are required to fill "
+      })
+    }
+
     const groupedBySeller = {};
     let user = await User.findById(userId);
     let savedOrders = [];
@@ -102,15 +109,25 @@ export const addToOrder = async (req, res) => {
   }
 };
 
-//Update Order Details
-export const updateOrderDetails=async(req,res)=>
+
+
+//Update Order Address
+export const updateOrderAddress=async(req,res)=>
 {
       try {
         
-        const updatedOrder=await Order.findByIdAndUpdate(req.params.id,
-            {
-                $set:req.body,
-            },
+     
+        const {orderId, address}=req.body;
+       
+        if(!orderId || !address)
+        {
+          return res.status(401).json({
+              message:"All Field Are  required to fill..."
+          })
+        }
+        
+        const updatedOrder=await Order.findByIdAndUpdate(orderId,
+            {$set:{address:address}},
             {new:true}
         );
 
@@ -131,8 +148,17 @@ export const updateOrderDetails=async(req,res)=>
 export const deleteOrder=async(req,res)=>
 {
       try {
+
+        const orderId=req.params.id;
+
+        if(!orderId)
+        {
+          return res.status(401).json({
+            message:"Th"
+          })
+        }
         
-        await Order.findByIdAndDelete(req.params.id);
+        await Order.findByIdAndDelete(orderId);
         res.status(200).json("Order has been deleted...");
 
       } catch (error) {

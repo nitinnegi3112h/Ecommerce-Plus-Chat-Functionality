@@ -1,20 +1,27 @@
 import User from '../Models/UserSchema.js';
 import bcrypt from'bcrypt'
 import { rmSync } from 'fs';
+import Joi from 'joi';
 import jwt from 'jsonwebtoken'
 
 
+const registerSchema = Joi.object({
+  userName: Joi.string().min(3).max(30).required(),
+  email: Joi.string().email().required(),
+  password: Joi.string().min(5).required(),
+  isAdmin: Joi.boolean().optional(),
+});
 
 export const register=async(req,res)=>
 {
      try {
-         const {email,userName,password,isAdmin}=req.body;
-         console.log(req.body);
- 
-         if(!email || !userName || !password)
-         {
-             return res.status(401).json('Please Fill all Details First...');
-         }
+         const { error, value } = registerSchema.validate(req.body);
+         
+          if (error) {
+           return res.status(400).json({ message: error.details[0].message });
+          }
+
+           const { userName, email, password,isAdmin } = value;
          
          const hashedPassword=await bcrypt.hash(password,10);
  
@@ -45,18 +52,24 @@ export const register=async(req,res)=>
      
     
 }
+
+const loginSchema = Joi.object({
+  userName: Joi.string().min(3).max(30).required(),
+  password: Joi.string().min(5).required(),
+});
+
 export const Login=async(req,res)=>
 {
      try {
-            
-            const {userName,password}=req.body;
-    
-            if(!userName || !password)
-            {
-                return res.status(500).json({
-                    message:"Fill All Details"
-                });
-            }
+        
+         const { error, value } = loginSchema.validate(req.body);
+         
+          if (error) {
+           return res.status(400).json({ message: error.details[0].message });
+          }
+
+           const { userName, password } = value;
+          
     
             const user=await User.findOne({userName});
     
@@ -112,7 +125,16 @@ export const Login=async(req,res)=>
 export const Delete=async(req,res)=>
 {
       try {
-        await User.findByIdAndDelete(req.params.id);
+         const userId=req.params.id;
+
+         if(userId)
+         {
+            return res.status(401).json({
+                message:"All field Are required...."
+            })
+         }
+
+        await User.findByIdAndDelete(userId);
         res.status(200).json("User has been deleted...");
 
       } catch (error) {
@@ -120,23 +142,27 @@ export const Delete=async(req,res)=>
       }
 }
 
+const forgotPasswordSchema = Joi.object({
+  oldPassword: Joi.string().min(5).required(),
+  newPassword: Joi.string().min(5).required(),
+});
+
 export const ForgotPassword=async(req,res)=>
 {
     try {
         
-            const {oldPassword,newPassword}=req.body;
-            const userId=req.user.id;
+        const { error, value } = forgotPasswordSchema.validate(req.body);
+         
+          if (error) {
+           return res.status(400).json({ message: error.details[0].message });
+          }
 
+         const { oldPassword, newPassword } = value;
+          
+         const userId=req.user.id;
 
-            if(!oldPassword || !newPassword || !userId)
-            {
-            res.status(401).json({
-            message:"Please Enter All required Field..."
-            });
-            }
-
-            const user=await User.findById(userId);
-            console.log(user);
+         const user=await User.findById(userId);
+       
 
             if(!user)
             {
@@ -148,6 +174,7 @@ export const ForgotPassword=async(req,res)=>
 
             const result= await bcrypt.compare(oldPassword,user.password);
             console.log(result);
+
             if(!result)
             {
             return res.status(500).json({

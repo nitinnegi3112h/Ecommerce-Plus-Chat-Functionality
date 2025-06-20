@@ -1,20 +1,37 @@
 import Product from "../Models/Product.js"
 import { renameSync, unlinkSync } from "fs";
 import redis from "../Utils/redis.js";
+import Joi from "joi";
+
+const registerSchema = Joi.object({
+  title: Joi.string().min(3).max(30).required(),
+  desc: Joi.string().min(3).max(100).required(),
+  categories: Joi.string().valid('Device','Clothes','Grocery','HealthCare').required(),
+  size: Joi.string().required(),
+  price: Joi.number().required(),
+  sellerId: Joi.string().required(),
+  });
+
 // Add New Product
 export const addNewProduct=async(req,res)=>
 {
       try {
+
+          const { error, value } = registerSchema.validate(req.body);
+
+          if (error) {
+          return res.status(400).json({ message: error.details[0].message });
+          }
+
+          const { title, desc,categories,size,price,sellerId } = value;
          
-        const {title,
-              desc,
-              categories,
-              size,
-              price,
-              sellerId
-            } =req.body;
-        
-         
+      
+        if(!req.file)
+        {
+          return res.status(401).json({
+            message:"Image of Product is also required To create New Product..."
+          })
+        }
 
        const date=Date.now();
        let filename="uploads/files/"+date+req.file.originalname;
@@ -50,7 +67,9 @@ export const updateProductDetails=async(req,res)=>
 {
       try {
         
-        const updatedProduct=await Product.findByIdAndUpdate(req.params.id,
+        const {productId}=req.body;
+
+        const updatedProduct=await Product.findByIdAndUpdate(productId,
             {
                 $set:req.body,
             },
@@ -96,7 +115,10 @@ export const deleteProduct=async(req,res)=>
 export const getProduct=async(req,res)=>
 {
       try {
-       const ProductDetails= await Product.findById(req.params.id);
+        
+        const ProductId=req.params.id;
+
+       const ProductDetails= await Product.findById(ProductId);
 
         res.status(200).json({ProductDetails});
 
@@ -117,7 +139,7 @@ export const getAllProduct=async(req,res)=>
     const qCategory=req.query.category;
       
     try {
-          const userId=req.user.id;
+        const userId=req.user.id;
         const cachedData=await redis.get(`allProduct:${userId}`);
 
         if(cachedData)
@@ -141,7 +163,7 @@ export const getAllProduct=async(req,res)=>
             products=await Product.find();
         }
 
-        await redis.set(`allProduct:${userId}`,JSON.stringify(products),'EX',60);
+       await redis.set(`allProduct:${userId}`,JSON.stringify(products),'EX',60);
 
 
       
@@ -192,18 +214,18 @@ export const FilterProduct=async(req,res)=>
     const filter={};
     const sortOptions={};
     
-   if(search)
-   {
-    filter.title={$regex:search,$options:'i'};
-   }
-   else if (sortBy)
-   {
-    sortOptions[sortBy]=sortOrder === 'asc' ? 1 : -1
-   }
-   else 
-   {
-      sortOptions.createdAt=-1;
-   }
+    if(search)
+    {
+      filter.title={$regex:search,$options:'i'};
+    }
+    else if (sortBy)
+    {
+      sortOptions[sortBy]=sortOrder === 'asc' ? 1 : -1
+    }
+    else 
+    {
+        sortOptions.createdAt=-1;
+    }
 
 
    const product=await Product.find(filter).sort(sortOptions);
@@ -220,5 +242,37 @@ export const FilterProduct=async(req,res)=>
       message:"Product Filter Failed ...."
     })
 
+  }
+}
+
+
+export const getSellerProductData=async (req,res)=>
+{
+  try {
+          
+    const userId=req.user.id;
+
+    const cachedSellerProductData=await redis.get(`getSellerProductData:${userId}`);
+
+    if(cachedSellerProductData)
+    {
+    res.status(201).json(JSON.parse(cachedSellerProductData));
+    }
+
+    const ProductData=await Product.find({sellerId:userId});
+
+   
+     await redis.set(`getSellerProductData:${userId}`,JSON.stringify(sellerProductData),'EX',60);
+
+    return res.status(201).json({
+      sellerProductData
+    })
+
+
+  } catch (error) {
+     console.log(error);
+    return res.status(401).json({
+      message:"Failed To Fetch Product Data...."
+    })
   }
 }

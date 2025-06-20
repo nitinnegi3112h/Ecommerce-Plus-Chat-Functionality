@@ -1,67 +1,76 @@
-import Stripe from "stripe";
+import { createRazorpayInstance } from "../Utils/razorpayConfig.js";
+import dotenv  from "dotenv";
+dotenv.config();
+import crypto from 'crypto'
 
-const stripe=new Stripe(process.env.STRIPE_KEY);
 
-export const createCustomer=async(req,res)=>
+const razorpayInstance=createRazorpayInstance();
+
+export const createOrder=async (req,res)=>
 {
+    const {courseId,amount}=req.body;
+
+    const options={
+        amount:amount*100,
+        currency:"INR",
+        receipt: 'receipt_order1'
+    }
+
     try {
         
-        const customer=await stripe.customers.create({
-            name:req.body.name,
-            email:req.body.email,
+        razorpayInstance.orders.create(options,(err,order)=>
+        {
+        if(err)
+        {
+        return res.status(401).json({
+        success:false,
+        message:"Something went wrong..."
         });
-
-        res.status(201).json({
-            customer
+        }else 
+        {
+            console.log(order);
+        return res.status(201).json({
+        success:true,
+        order:order
+        })
+        }
         })
 
-    } catch (error) {
-        res.status(401).json({
-            message:"Customer Creation failed",
+        } catch (error) {
+        return res.status(500).json({
+        success:false,
+        message:"Something went wrong.."
         })
-    }
+        }
+
+
 }
 
-
-export const addCard=async(req,res)=>
+export const verifyPayment=async(req,res)=>
 {
-    try {
+    const {order_id,payment_id,signature}=req.body;
 
-        const {customer_id,
-               card_Name,
-               card_ExpYear,
-               card_ExpMonth,
-               card_Number,
-               card_CVC,
-        }=req.body;
+    console.log(order_id,payment_id,signature);
+    const secret=process.env.RAZORPAY_KEY_SECRET;
 
-        const card_token=await stripe.tokens.create({
-            card:{
-                 name:card_Name,
-                  number:card_Number,
-                  exp_year:card_ExpYear,
-                  exp_month:card_ExpMonth,
-                  cvc:card_CVC
-            }
+    const hmac=crypto.createHmac('sha256',secret);
+
+    hmac.update(order_id+"|"+ payment_id);
+
+    const generatedSignature=hmac.digest("hex");
+
+    if(generatedSignature === signature)
+    {
+        return res.status(200).json({
+            success:true,
+            message:"Payment Verified..."
         });
-
-        
-
-        const card=await stripe.customers.createSource(customer_id,{
-            source:`${card_token.id}`
-        });
-
-       
-
-        res.status(201).json({
-            card:card.id
-        });
-        
-    } catch (error) {
-        
-        console.log(error)
-        res.status(401).json({
-            message:"Failed To add Card...."
+    }else
+    {
+        return res.status(400).json({
+            success:false,
+            message:"Failed To Verify Payment..."
         })
     }
+
 }
