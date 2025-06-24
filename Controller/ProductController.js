@@ -2,6 +2,8 @@ import Product from "../Models/Product.js"
 import { renameSync, unlinkSync } from "fs";
 import redis from "../Utils/redis.js";
 import Joi from "joi";
+import Order from "../Models/OrderSchema.js";
+import mongoose from "mongoose";
 
 const registerSchema = Joi.object({
   title: Joi.string().min(3).max(30).required(),
@@ -262,10 +264,10 @@ export const getSellerProductData=async (req,res)=>
     const ProductData=await Product.find({sellerId:userId});
 
    
-     await redis.set(`getSellerProductData:${userId}`,JSON.stringify(sellerProductData),'EX',60);
+     await redis.set(`getSellerProductData:${userId}`,JSON.stringify(ProductData),'EX',60);
 
     return res.status(201).json({
-      sellerProductData
+      ProductData
     })
 
 
@@ -274,5 +276,150 @@ export const getSellerProductData=async (req,res)=>
     return res.status(401).json({
       message:"Failed To Fetch Product Data...."
     })
+  }
+}
+
+
+//used To get trending Product....
+export const trendingProduct=async(req,res)=>
+{
+  try {
+    
+     const trendingProduct=await Order.aggregate([
+      {
+        $match:{
+          createdAt:{
+            $gte:new Date(Date.now()-30*24*60*60*1000)
+          }
+        }
+      },
+      {
+        $unwind:"$products"
+      },
+      {
+        $group:{
+          _id:"$products.productId",
+          totalSold:{$sum: "$products.quantity"},
+        }
+      },
+      {
+        $match:{
+          totalSold:{$gt:10}
+        }
+      },
+      {$lookup:{
+        from:"products",
+        localField:"_id",
+        foreignField:"_id",
+        as:"product"
+      }},
+      {
+        $unwind:"$product"
+      },
+      {
+        $project:{
+
+          _id:0,
+          productId:"$product._id",
+          totalSold:1,
+          price:"$product.price",
+          name:"$product.title",
+          image:"$product.img",
+          categories:"$product.categories",
+        },
+
+      },
+      {
+      $sort: { totalSold: -1 }  
+      },
+    
+     ])
+
+
+     return res.status(201).json({
+      success:true,
+      trendingProduct
+     })
+
+  } catch (error) {
+    
+    console.log(error)
+     return res.status(201).json({
+      success:false,
+      message:"failed to fetch trending Product....."
+     })
+  }
+}
+
+
+//used To get trendingSellingProductOfSeller ....
+export const trendingSellingProductOfSeller=async(req,res)=>
+{
+  try {
+    const userId=new mongoose.Types.ObjectId(req.user.id);
+     const trendingProduct=await Order.aggregate([
+      {
+        $match:{
+          createdAt:{
+            $gte:new Date(Date.now()-30*24*60*60*1000)
+          },
+          sellerId:userId,
+        }
+      },
+      {
+        $unwind:"$products"
+      },
+      {
+        $group:{
+          _id:"$products.productId",
+          totalSold:{$sum: "$products.quantity"},
+        }
+      },
+      {
+        $match:{
+          totalSold:{$gt:5}
+        }
+      },
+      {$lookup:{
+        from:"products",
+        localField:"_id",
+        foreignField:"_id",
+        as:"product"
+      }},
+      {
+        $unwind:"$product"
+      },
+      {
+        $project:{
+
+          _id:0,
+          productId:"$product._id",
+          totalSold:1,
+          price:"$product.price",
+          name:"$product.title",
+          image:"$product.img",
+          categories:"$product.categories",
+        },
+
+      },
+      {
+      $sort: { totalSold: -1 }  
+      },
+    
+     ])
+
+
+     return res.status(201).json({
+      success:true,
+      trendingProduct
+     })
+
+  } catch (error) {
+    
+    console.log(error)
+     return res.status(201).json({
+      success:false,
+      message:"failed to fetch trending Product....."
+     })
   }
 }
